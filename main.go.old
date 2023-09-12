@@ -1,0 +1,98 @@
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"time"
+)
+
+// https://mholt.github.io/json-to-go/
+// https://viacep.com.br/
+type ViaCEP struct {
+	Cep         string `json:"cep"`
+	Logradouro  string `json:"logradouro"`
+	Complemento string `json:"complemento"`
+	Bairro      string `json:"bairro"`
+	Localidade  string `json:"localidade"`
+	Uf          string `json:"uf"`
+	Ibge        string `json:"ibge"`
+	Gia         string `json:"gia"`
+	Ddd         string `json:"ddd"`
+	Siafi       string `json:"siafi"`
+}
+
+// https://cdn.apicep.com/
+type ApiCep struct {
+	Code       string `json:"code"`
+	State      string `json:"state"`
+	City       string `json:"city"`
+	District   string `json:"district"`
+	Address    string `json:"address"`
+	Status     int    `json:"status"`
+	Ok         bool   `json:"ok"`
+	StatusText string `json:"statusText"`
+}
+
+func BuscarAPI(url string, ch chan<- string) {
+	start     := time.Now()
+	resp, err := http.Get(url)
+	elapsed   := time.Since(start).Seconds()
+
+	if err != nil {
+		ch <- fmt.Sprintf("Erro ao fazer a requisição para %s: %s", url, err)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		ch <- fmt.Sprintf("API %s retornou código de status %d", url, resp.StatusCode)
+		return
+	}
+
+	ch <- fmt.Sprintf("Resultado da API %s: %s", url, elapsed)
+}
+
+func BuscaCep(cep, url   string  ) (*ViaCEP, error) {
+	resp, error := http.Get("https://viacep.com.br/ws/" + cep + "/json")
+	if error != nil {
+		return nil, error
+	}
+	defer resp.Body.Close()
+	body, error := io.ReadAll(resp.Body)
+
+	if error != nil {
+		return nil, error
+	}
+	var c ViaCEP
+	error = json.Unmarshal(body, &c)
+	if error != nil {
+		return nil, error
+	}
+	
+	return &c, nil
+}
+
+
+
+
+
+
+func main() {
+	cep := "01001-000" // Substitua pelo CEP desejado
+
+	apicepURL := "https://cdn.apicep.com/file/apicep/" + cep + ".json"
+	viacepURL := "http://viacep.com.br/ws/" + cep + "/json"
+
+	ch := make(chan string, 2)
+
+	go BuscarAPI(apicepURL, ch)
+	go BuscarAPI(viacepURL, ch)
+
+	select {
+	case result := <-ch:
+		fmt.Println(result)
+	case <-time.After(1 * time.Second):
+		fmt.Println("Timeout - nenhuma API respondeu dentro do tempo limite")
+	}
+}
