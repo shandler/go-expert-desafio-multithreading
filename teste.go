@@ -85,8 +85,7 @@ func main() {
 	cep := os.Args[1]
 
 	apicepURL := "https://cdn.apicep.com/file/apicep/" + cep + ".json"
-	viacepURL := "https://cdn.apicep.com/file/apicep/" + cep + ".json"
-	//viacepURL := "http://viacep.com.br/ws/" + cep + "/json"
+	viacepURL := "http://viacep.com.br/ws/" + cep + "/json"
 
 	ch := make(chan struct {
 		URL     string
@@ -107,37 +106,24 @@ func main() {
 
 	select {
 	case <-time.After(1 * time.Second):
-		fmt.Println("Timeout - nenhuma API respondeu dentro do tempo limite")
+		fmt.Println("Timeout - Nenhuma API respondeu dentro do tempo limite")
 	case result = <-ch:
 		fmt.Printf("Resultado da API %s (Tempo: %.2f segundos):\n", result.URL, result.Elapsed)
 		switch result.URL {
 		case apicepURL:
-			//RetornoCEP := ApiCep{}
-			// if data, ok := result.Result.(map[string]interface{}); ok {
-			// 	if err := mapstructure.Decode(data, &RetornoCEP); err == nil {
-			// 		imprimirStruct(RetornoCEP)
-			// 	}
-			// }
-			converterEImprimir(result.Result, ApiCep{})
+			RetornoCEP := ApiCep{}
+			if data, ok := result.Result.(map[string]interface{}); ok {
+				if err := mapstructure.Decode(data, &RetornoCEP); err == nil {
+					imprimirStruct(RetornoCEP)
+				}
+			}
 		case viacepURL:
-			//RetornoCEP := ViaCEP{}
-			// if data, ok := result.Result.(map[string]interface{}); ok {
-			// 	if err := mapstructure.Decode(data, &RetornoCEP); err == nil {
-			// 		imprimirStruct(RetornoCEP)
-			// 	}
-			// }
-			converterEImprimir(result.Result, ViaCEP{})
-		}
-
-	}
-}
-
-func converterEImprimir(data interface{}, estrutura interface{}) {
-	if dataMap, ok := data.(map[string]interface{}); ok {
-		println("Aqui 01")
-		if err := mapstructure.Decode(dataMap, estrutura); err != nil {
-			println(estrutura)
-			imprimirStruct(estrutura)
+			RetornoCEP := ViaCEP{}
+			if data, ok := result.Result.(map[string]interface{}); ok {
+				if err := mapstructure.Decode(data, &RetornoCEP); err == nil {
+					imprimirStruct(RetornoCEP)
+				}
+			}
 		}
 	}
 }
